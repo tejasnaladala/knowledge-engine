@@ -1,0 +1,17 @@
+node_modules/
+dist/
+data/*
+!data/.gitkeep
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+.DS_Store
+.env
+*.mp4
+*.mp3
+*.wav
+*.webm
+*.jpg
+*.png
+.claude/

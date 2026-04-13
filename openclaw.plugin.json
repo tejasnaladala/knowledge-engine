@@ -1,0 +1,43 @@
+{
+  "id": "knowledge-engine",
+  "name": "Knowledge Engine",
+  "description": "Personal AI knowledge engine for Instagram reels - extracts, organizes, and queries knowledge from video content",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "dbPath": {
+        "type": "string",
+        "description": "Path to knowledge SQLite database",
+        "default": "data/knowledge.sqlite"
+      },
+      "mediaDir": {
+        "type": "string",
+        "description": "Directory for downloaded media files",
+        "default": "data/processed"
+      },
+      "inboxDir": {
+        "type": "string",
+        "description": "Drop folder for reel URLs to ingest",
+        "default": "data/inbox"
+      },
+      "whisperModel": {
+        "type": "string",
+        "description": "Whisper model size (base/small/medium)",
+        "default": "base"
+      },
+      "autoRecall": {
+        "type": "boolean",
+        "description": "Auto-inject relevant knowledge into agent context",
+        "default": true
+      },
+      "maxOcrFrames": {
+        "type": "number",
+        "description": "Max frames for OCR extraction",
+        "default": 5
+      }
+    }
+  }
+}
