@@ -20,7 +20,7 @@
       },
       "inboxDir": {
         "type": "string",
-        "description": "Drop folder for reel URLs to ingest",
+        "description": "Drop folder for URLs to ingest (GitHub, web, arXiv, video, and more)",
         "default": "data/inbox"
       },
       "whisperModel": {

@@ -276,7 +276,8 @@ Back it up by copying one file. Move it between machines. It's just SQLite.
 
 ```bash
 # .env
-WHISPER_MODEL=base          # whisper model size: base, small, medium
+KE_WHISPER_MODEL=base       # whisper model size: base, small, medium
+KE_MAX_OCR_FRAMES=5         # frames to OCR per video
 KE_DB_PATH=data/knowledge.sqlite
 KE_DASHBOARD_PORT=3737
 ```
