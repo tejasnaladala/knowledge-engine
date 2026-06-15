@@ -12,7 +12,13 @@
   <a href="#supported-sources">Sources</a> &#8226;
   <a href="#dashboard">Dashboard</a> &#8226;
   <a href="#querying">Querying</a> &#8226;
-  <a href="#telegram-bot">Telegram Bot</a>
+  <a href="#auto-capture-from-chat">Auto-Capture</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/tejasnaladala/knowledge-engine/actions/workflows/ci.yml"><img src="https://github.com/tejasnaladala/knowledge-engine/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/tests-148%20passing-brightgreen" alt="148 tests passing" />
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
 </p>
 
 ---
@@ -33,14 +39,11 @@ Knowledge Engine watches your saved content, extracts the useful signal, builds 
 
 ```bash
 # clone and install
-git clone https://github.com/YOUR_USERNAME/knowledge-engine.git
+git clone https://github.com/tejasnaladala/knowledge-engine.git
 cd knowledge-engine
 npm install
 
-# set up dependencies
-brew install yt-dlp ffmpeg whisper-cpp
-
-# ingest your first piece of content
+# ingest a GitHub repo (no extra tools needed beyond `gh`)
 npm run ke -- ingest https://github.com/vercel/next.js
 
 # search your knowledge
@@ -50,6 +53,10 @@ npm run ke -- search "react framework"
 npm run ke -- dashboard
 # open http://localhost:3737
 ```
+
+GitHub, web, Reddit, Hacker News, and arXiv ingestion work with just Node and
+the `gh` CLI. Video sources (Instagram, YouTube, TikTok) additionally need
+`yt-dlp`, `ffmpeg`, and `whisper` (see [Requirements](#requirements)).
 
 ## How It Works
 
@@ -78,7 +85,7 @@ npm run ke -- dashboard
         |
         v
   +------------------+
-  |   Query Layer    |  FTS5 + vector search + graph traversal
+  |   Query Layer    |  FTS5 + hash-vector similarity + graph traversal
   |                  |  Project mode, weekly digests, trending
   +------------------+
 ```
@@ -164,36 +171,35 @@ Returns:
 
 Every recommendation links back to the exact source where you first saw it.
 
-## Telegram Bot
+## Auto-Capture from Chat
 
-The easiest way to feed content into the engine. Set up a Telegram bot and just forward or share links to it from any app.
+The engine registers a `message_received` hook with the OpenClaw runtime. Any
+channel OpenClaw is connected to (including a Telegram bot, if you wire one up
+on the OpenClaw side) becomes an intake: send a link, the hook detects the
+source type, queues it for ingestion, and replies inline.
 
-### Setup
-
-1. Message [@BotFather](https://t.me/BotFather) on Telegram
-2. Send `/newbot`, pick a name, get your token
-3. Configure the bot token in your environment or OpenClaw config
-
-### Usage
-
-Just send any URL to your bot:
+Send any URL:
 
 ```
-https://github.com/anthropics/anthropic-sdk-python
+https://github.com/openai/whisper
 ```
 
-The bot will reply with:
+The hook replies:
+
 ```
 Ingesting GitHub Repo... This may take a minute.
 
 Ingested GitHub Repo
 Type: repo_recommendation
-Summary: Official Python SDK for the Anthropic API...
-Entities: anthropic-sdk-python, Anthropic, Python
-Topics: sdk, api-client, ai-integration
+Summary: Robust speech recognition via large-scale weak supervision...
+Entities: whisper, OpenAI, Python
+Topics: speech-recognition, transcription, ml-model
 ```
 
-Works with any URL from any platform. Share a reel from Instagram, a video from YouTube, a post from Reddit -- all through the same bot.
+This is channel-agnostic: the same hook handles a forwarded Instagram reel, a
+YouTube link, or a Reddit post. The Telegram piece itself lives in your
+OpenClaw configuration, not in this repo. If you don't use OpenClaw, the CLI
+(`npm run ke -- ingest <url>`) and the inbox-folder watcher cover the same path.
 
 ## Knowledge Graph
 
@@ -260,7 +266,7 @@ Everything lives in a single SQLite file at `data/knowledge.sqlite`. Fully porta
 
 The database uses:
 - **FTS5** for full-text search across transcripts, summaries, and descriptions
-- **Vector embeddings** for semantic similarity search
+- **Hash-based vectors** for fuzzy similarity ranking. These are 256-dimension trigram-hash vectors (see `src/storage/embeddings.ts`), not learned embeddings, so similarity is lexical, not true semantic. Swapping in a real embedding model behind the same interface is the obvious next step.
 - **Relational tables** for the knowledge graph (entities, relationships, facts)
 - **WAL mode** for concurrent reads during ingestion
 
@@ -277,20 +283,34 @@ KE_DASHBOARD_PORT=3737
 
 ## Requirements
 
+Core (text, GitHub, web, papers):
 - Node.js 20+
+- [gh CLI](https://cli.github.com/) for GitHub repo extraction
+- An LLM provider exposed as an `openclaw agent` CLI (used for the analysis step)
+
+Video sources (Instagram, YouTube, TikTok) also need:
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) for video downloads
 - [ffmpeg](https://ffmpeg.org/) for audio extraction
-- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for transcription
-- [gh CLI](https://cli.github.com/) for GitHub repo extraction
-- An LLM provider (configured via OpenClaw or direct API)
-
-Install everything on macOS:
+- [openai-whisper](https://github.com/openai/whisper) for transcription (provides the `whisper` CLI)
 
 ```bash
+# macOS
 brew install yt-dlp ffmpeg gh
-# whisper.cpp
-brew install whisper-cpp
+pip install openai-whisper
+
+# Linux (Debian/Ubuntu)
+sudo apt install yt-dlp ffmpeg
+pip install openai-whisper
+# gh: see https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+
+# Verify what's installed
+bash scripts/setup-deps.sh
 ```
+
+The transcriber currently resolves `ffmpeg` and `whisper` from the Homebrew
+prefix (`/opt/homebrew/bin`). On Linux or Intel macOS, point it at your install
+paths or symlink them there. Optional Instagram scraping needs `playwright-core`
+(`npm install playwright-core && npx playwright install chromium`).
 
 ## Running Tests
 

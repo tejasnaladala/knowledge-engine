@@ -2,7 +2,7 @@
   "name": "knowledge-engine",
   "version": "0.1.0",
   "type": "module",
-  "description": "Personal AI knowledge engine for Instagram reels - OpenClaw plugin",
+  "description": "Personal knowledge engine: ingest saved videos, repos, papers, and articles into a queryable knowledge graph",
   "main": "dist/index.js",
   "openclaw": {
     "extensions": ["./index.ts"]
@@ -19,6 +19,9 @@
     "@sinclair/typebox": "^0.34.49",
     "better-sqlite3": "^11.9.1",
     "uuid": "^11.1.0"
+  },
+  "optionalDependencies": {
+    "playwright-core": "^1.49.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

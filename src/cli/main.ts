@@ -61,8 +61,10 @@ function getDB(): KnowledgeDB {
 function getPipelineConfig(): PipelineConfig {
   return {
     mediaDir: MEDIA_DIR,
-    whisperModel: process.env.WHISPER_MODEL || 'base',
-    maxOcrFrames: 5,
+    // KE_WHISPER_MODEL is the documented name (see .env.example);
+    // WHISPER_MODEL stays as a fallback for older configs.
+    whisperModel: process.env.KE_WHISPER_MODEL || process.env.WHISPER_MODEL || 'base',
+    maxOcrFrames: Number(process.env.KE_MAX_OCR_FRAMES) || 5,
   };
 }
 
@@ -542,7 +544,10 @@ ${bold('Usage:')}
   ke dashboard [--port 3737] Start the web dashboard
 
 ${bold('Environment:')}
-  WHISPER_MODEL              Whisper model size: base, small, medium (default: base)
+  KE_WHISPER_MODEL           Whisper model size: base, small, medium (default: base)
+  KE_DB_PATH                 SQLite database path (default: data/knowledge.sqlite)
+  KE_DASHBOARD_PORT          Dashboard port (default: 3737)
+  KE_MAX_OCR_FRAMES          Frames to OCR per video (default: 5)
 
 ${bold('Supported sources:')}
   Instagram reels, YouTube, TikTok, GitHub repos/issues/PRs,

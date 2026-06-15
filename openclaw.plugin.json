@@ -1,7 +1,7 @@
 {
   "id": "knowledge-engine",
   "name": "Knowledge Engine",
-  "description": "Personal AI knowledge engine for Instagram reels - extracts, organizes, and queries knowledge from video content",
+  "description": "Personal knowledge engine - extracts, organizes, and queries knowledge from saved videos, repos, papers, and articles",
   "version": "0.1.0",
   "main": "dist/index.js",
   "configSchema": {

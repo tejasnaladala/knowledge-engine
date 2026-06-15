@@ -2,7 +2,7 @@
 
 ## 1. Atmosphere
 
-**Product:** Personal AI knowledge engine dashboard. Ingests Instagram reels, extracts knowledge, builds a graph, and surfaces project recommendations.
+**Product:** Personal knowledge engine dashboard. Ingests saved videos, repos, papers, and articles, extracts knowledge, builds a graph, and surfaces project recommendations.
 
 **Density:** 5/10 -- Daily App Balanced. Enough information density to be useful, enough breathing room to feel calm.
 **Variance:** 7/10 -- Offset Asymmetric. Avoids generic grid symmetry. Uses split layouts, varied card sizes, and deliberate whitespace imbalance.
