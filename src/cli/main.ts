@@ -515,8 +515,8 @@ async function cmdEnrich(): Promise<void> {
 
 // ── Phase 6: Dashboard Command ───────────────────────────────────────────
 
-function cmdDashboard(port: number): void {
-  startDashboardServer(port);
+function cmdDashboard(port: number, external?: boolean): void {
+  startDashboardServer({ port, external });
 }
 
 // ── Usage ───────────────────────────────────────────────────────────────
@@ -541,12 +541,16 @@ ${bold('Usage:')}
   ke recommend <description> Project mode recommendations
   ke digest [days]           Weekly/custom period digest
   ke enrich                  Run GitHub enrichment on all repos
-  ke dashboard [--port 3737] Start the web dashboard
+  ke dashboard [--port 3737] [--external] Start the web dashboard
 
 ${bold('Environment:')}
   KE_WHISPER_MODEL           Whisper model size: base, small, medium (default: base)
   KE_DB_PATH                 SQLite database path (default: data/knowledge.sqlite)
   KE_DASHBOARD_PORT          Dashboard port (default: 3737)
+  KE_DASHBOARD_EXTERNAL      Set true to enable authenticated external mode
+  KE_DASHBOARD_HOST          Bind host (default: 127.0.0.1, or 0.0.0.0 in external mode)
+  KE_DASHBOARD_TOKEN         External-mode token (required, at least 32 bytes)
+  KE_DASHBOARD_ALLOWED_ORIGINS Comma-separated exact browser origins
   KE_MAX_OCR_FRAMES          Frames to OCR per video (default: 5)
 
 ${bold('Supported sources:')}
@@ -683,7 +687,8 @@ async function main(): Promise<void> {
       if (portIdx !== -1 && args[portIdx + 1]) {
         dashPort = parseInt(args[portIdx + 1], 10);
       }
-      cmdDashboard(dashPort);
+      const external = args.includes('--external') ? true : undefined;
+      cmdDashboard(dashPort, external);
       // Keep alive -- server handles its own lifecycle
       await new Promise<void>(() => {});
       break;
