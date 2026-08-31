@@ -121,8 +121,27 @@ The web dashboard at `http://localhost:3737` gives you a live view of your knowl
 ```bash
 npm run ke -- dashboard
 # or with a custom port
-npm run ke -- dashboard --port 4000
+npm run ke -- dashboard -- --port 4000
 ```
+
+The dashboard binds to `127.0.0.1` by default and does not require
+authentication in local mode. A non-loopback bind is rejected unless external
+mode is enabled explicitly:
+
+```bash
+KE_DASHBOARD_TOKEN="a-random-token-with-at-least-32-bytes" \
+KE_DASHBOARD_ALLOWED_ORIGINS="https://dashboard.example.com" \
+npm run ke -- dashboard -- --external
+```
+
+External mode binds to `0.0.0.0`, requires authentication on the dashboard,
+API, and event stream, and exposes a reduced dashboard view rather than raw
+transcripts, OCR output, source URLs, or processing metadata. API clients can
+send `Authorization: Bearer <token>`. Browsers use HTTP Basic authentication
+with `knowledge-engine` as the username and the configured token as the
+password. Put external mode behind HTTPS termination (or keep it on a trusted
+private network), and list cross-origin browser clients as exact `http://` or
+`https://` origins without paths. CORS remains disabled for every other origin.
 
 ## Querying
 
@@ -280,6 +299,11 @@ KE_WHISPER_MODEL=base       # whisper model size: base, small, medium
 KE_MAX_OCR_FRAMES=5         # frames to OCR per video
 KE_DB_PATH=data/knowledge.sqlite
 KE_DASHBOARD_PORT=3737
+KE_DASHBOARD_HOST=127.0.0.1
+KE_DASHBOARD_EXTERNAL=false
+# External mode only:
+# KE_DASHBOARD_TOKEN=<random token of at least 32 bytes>
+# KE_DASHBOARD_ALLOWED_ORIGINS=https://dashboard.example.com
 ```
 
 ## Requirements
