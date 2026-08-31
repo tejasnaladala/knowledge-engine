@@ -178,7 +178,7 @@ function isStoredReelPayload(value: Record<string, unknown>): boolean {
     && ('transcript' in value || 'ocr_text' in value || 'github_urls' in value);
 }
 
-function minimizeExternalPayload(value: unknown): unknown {
+export function minimizeExternalPayload(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(minimizeExternalPayload);
   if (!value || typeof value !== 'object') return value;
 
@@ -577,6 +577,7 @@ function applyOriginPolicy(
   if (!origin) return true;
   if (!isAllowedOrigin(origin, req, config)) return false;
   res.setHeader('Access-Control-Allow-Origin', origin);
+  if (config.external) res.setHeader('Access-Control-Allow-Credentials', 'true');
   appendVaryOrigin(res);
   return true;
 }
@@ -607,6 +608,7 @@ function handlePreflight(
 
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (config.external) res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (requestedHeaders.length > 0) {
     res.setHeader(
       'Access-Control-Allow-Headers',

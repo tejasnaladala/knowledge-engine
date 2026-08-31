@@ -1,11 +1,12 @@
 import http from 'node:http';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { KnowledgeDB } from '../src/storage/db.js';
 import {
+  minimizeExternalPayload,
   resolveDashboardConfig,
   startDashboardServer,
   type DashboardServerOptions,
@@ -174,6 +175,7 @@ describe.sequential('dashboard network boundary', () => {
       });
       expect(trusted.status).toBe(200);
       expect(trusted.headers.get('access-control-allow-origin')).toBe(TRUSTED_ORIGIN);
+      expect(trusted.headers.get('access-control-allow-credentials')).toBe('true');
       expect(trusted.headers.get('vary')).toContain('Origin');
 
       const untrusted = await fetch(`${baseUrl}/api/stats`, {
@@ -211,6 +213,7 @@ describe.sequential('dashboard network boundary', () => {
       expect(preflight.status).toBe(204);
       expect(preflight.headers.get('access-control-allow-origin')).toBe(TRUSTED_ORIGIN);
       expect(preflight.headers.get('access-control-allow-headers')).toBe('Authorization');
+      expect(preflight.headers.get('access-control-allow-credentials')).toBe('true');
       expect(preflight.headers.get('access-control-allow-origin')).not.toBe('*');
 
       const hostilePreflight = await fetch(`${baseUrl}/api/stats`, {
@@ -260,6 +263,39 @@ describe.sequential('dashboard network boundary', () => {
     } finally {
       await close(server);
     }
+  });
+
+  it('recursively strips private fields before external API or event delivery', () => {
+    const minimized = minimizeExternalPayload({
+      summary: 'safe summary',
+      nested: {
+        transcript: 'private transcript',
+        ocr_text: 'private OCR',
+        url: 'https://private.example.test',
+        metadata: { private: true },
+        retained: 'safe value',
+      },
+    });
+
+    expect(minimized).toEqual({
+      summary: 'safe summary',
+      nested: { retained: 'safe value' },
+    });
+  });
+
+  it('keeps stored values out of inline JavaScript handlers', async () => {
+    const html = await readFile(
+      path.resolve(import.meta.dirname, '../src/dashboard/index.html'),
+      'utf8',
+    );
+    const handlers = [...html.matchAll(/\son[a-z]+="([^"]*)"/gi)]
+      .map(match => match[1]);
+
+    expect(handlers.length).toBeGreaterThan(0);
+    expect(handlers.every(handler => !handler.includes('+'))).toBe(true);
+    expect(handlers.every(handler => !handler.includes('esc('))).toBe(true);
+    expect(html).toContain('function attr(str)');
+    expect(html).toContain('function cssToken(value)');
   });
 
   it('does not return internal exception details in external mode', async () => {

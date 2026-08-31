@@ -1305,6 +1305,23 @@ function esc(str) {
   return div.innerHTML;
 }
 
+function attr(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function cssToken(value) {
+  return String(value || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function finiteNumber(value, fallback) {
+  var parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : (fallback || 0);
+}
+
 function getTimeAgo(dateStr) {
   if (!dateStr) return '';
   var then = new Date(dateStr + (dateStr.includes('Z') ? '' : 'Z'));
@@ -1359,17 +1376,19 @@ function renderEntities(entities) {
     return;
   }
 
-  maxMentions = Math.max.apply(null, entities.map(function(e) { return e.mention_count; })) || 1;
+  maxMentions = Math.max.apply(null, entities.map(function(e) { return finiteNumber(e.mention_count, 0); })) || 1;
 
   container.innerHTML = entities.map(function(e) {
-    var barWidth = Math.max(2, (e.mention_count / maxMentions) * 100);
+    var mentionCount = finiteNumber(e.mention_count, 0);
+    var barWidth = Math.max(2, (mentionCount / maxMentions) * 100);
     var color = getTypeColor(e.type);
-    return '<div class="entity-row" onclick="showEntityDetail(\'' + esc(e.canonical_name).replace(/'/g, "\\'") + '\')">' +
+    var type = e.type || 'unknown';
+    return '<div class="entity-row" data-entity="' + attr(e.canonical_name) + '" onclick="showEntityDetail(this.dataset.entity)">' +
       '<span class="entity-dot" style="background:' + color + '"></span>' +
       '<span class="entity-name">' + esc(e.display_name || e.canonical_name) + '</span>' +
-      '<span class="badge badge-' + (e.type || 'default') + '">' + (e.type || 'unknown') + '</span>' +
+      '<span class="badge badge-' + cssToken(type) + '">' + esc(type) + '</span>' +
       '<span class="entity-mentions">' +
-        '<span class="entity-mention-count">' + e.mention_count + '</span>' +
+        '<span class="entity-mention-count">' + mentionCount + '</span>' +
         '<span class="mention-bar" style="width:' + barWidth + 'px;background:' + color + '"></span>' +
       '</span>' +
     '</div>';
@@ -1400,12 +1419,12 @@ function renderTrending(trending) {
   }
 
   panel.innerHTML = trending.map(function(e) {
-    var badgeClass = e.type ? 'badge badge-' + e.type : 'badge badge-default';
+    var badgeClass = e.type ? 'badge badge-' + cssToken(e.type) : 'badge badge-default';
     return '<div class="trending-item">' +
       '<svg width="10" height="10" viewBox="0 0 10 10" style="flex-shrink:0"><polygon points="5,1 9,7 1,7" fill="#0D9488"/></svg>' +
-      '<span class="trend-name" onclick="showEntityDetail(\'' + esc(e.name).replace(/'/g, "\\'") + '\')">' + esc(e.name) + '</span>' +
-      (e.type ? '<span class="' + badgeClass + '">' + e.type + '</span>' : '') +
-      '<span class="trend-delta">+' + e.recentMentions + '</span>' +
+      '<span class="trend-name" data-entity="' + attr(e.name) + '" onclick="showEntityDetail(this.dataset.entity)">' + esc(e.name) + '</span>' +
+      (e.type ? '<span class="' + badgeClass + '">' + esc(e.type) + '</span>' : '') +
+      '<span class="trend-delta">+' + finiteNumber(e.recentMentions, 0) + '</span>' +
     '</div>';
   }).join('');
 }
@@ -1468,7 +1487,7 @@ function renderReels(reels) {
     var srcIcon = sourceIcons[st] || 'WEB';
     var srcColor = sourceColors[st] || '#78716C';
     var sourceBadge = '<span class="badge" style="background:' + srcColor + ';color:#fff;font-weight:600;font-size:10px;letter-spacing:0.5px;padding:2px 6px;">' + srcIcon + '</span>';
-    return '<div class="reel-item" onclick="showReelDetail(\'' + esc(r.id).replace(/'/g, "\\'") + '\')">' +
+    return '<div class="reel-item" data-reel="' + attr(r.id) + '" onclick="showReelDetail(this.dataset.reel)">' +
       '<div class="reel-meta">' +
         sourceBadge +
         '<span class="reel-time">' + timeAgo + '</span>' +
@@ -1583,7 +1602,7 @@ function onGraphMouseMove(e) {
 
   if (node) {
     graphHoveredNode = node;
-    tooltip.innerHTML = '<strong>' + esc(node.name) + '</strong><br><span class="tooltip-type">' + node.type + ' \u00b7 ' + node.mentionCount + ' mentions</span>';
+    tooltip.innerHTML = '<strong>' + esc(node.name) + '</strong><br><span class="tooltip-type">' + esc(node.type) + ' \u00b7 ' + finiteNumber(node.mentionCount, 0) + ' mentions</span>';
     tooltip.style.left = (mx + 14) + 'px';
     tooltip.style.top = (my - 10) + 'px';
     tooltip.classList.add('visible');
@@ -1885,7 +1904,7 @@ function renderRecommendations(rec) {
     { key: 'architectures', title: 'Architectures' },
   ];
 
-  var html = '<div class="project-results-meta">Found ' + rec.totalMatches + ' matches in ' + rec.queryTimeMs + 'ms</div>';
+  var html = '<div class="project-results-meta">Found ' + finiteNumber(rec.totalMatches, 0) + ' matches in ' + finiteNumber(rec.queryTimeMs, 0) + 'ms</div>';
 
   for (var ci = 0; ci < categories.length; ci++) {
     var cat = categories[ci];
@@ -1896,28 +1915,28 @@ function renderRecommendations(rec) {
 
     for (var ii = 0; ii < items.length; ii++) {
       var item = items[ii];
-      var scorePercent = Math.round(item.score * 100);
-      var badgeClass = 'badge badge-' + (item.type || 'default');
-      var hypeClass = 'badge badge-hype-' + (item.hypeLevel || 'grounded');
-      var readinessClass = 'badge badge-readiness-' + (item.readiness || 'concept');
+      var scorePercent = Math.max(0, Math.min(100, Math.round(finiteNumber(item.score, 0) * 100)));
+      var badgeClass = 'badge badge-' + cssToken(item.type || 'default');
+      var hypeClass = 'badge badge-hype-' + cssToken(item.hypeLevel || 'grounded');
+      var readinessClass = 'badge badge-readiness-' + cssToken(item.readiness || 'concept');
 
       var hypeLabel = item.hypeLevel === 'grounded' ? 'Grounded' : item.hypeLevel === 'moderate_hype' ? 'Moderate' : item.hypeLevel === 'high_hype' ? 'High Hype' : (item.hypeLevel || '');
       var readinessLabel = item.readiness ? item.readiness.charAt(0).toUpperCase() + item.readiness.slice(1) : '';
 
       html += '<div class="rec-item">' +
         '<div class="rec-item-header">' +
-          '<span class="rec-name" onclick="showEntityDetail(\'' + esc(item.name).replace(/'/g, "\\'") + '\')">' + esc(item.name) + '</span>' +
-          '<span class="' + badgeClass + '">' + (item.type || '') + '</span>' +
-          (hypeLabel ? '<span class="' + hypeClass + '">' + hypeLabel + '</span>' : '') +
-          (readinessLabel ? '<span class="' + readinessClass + '">' + readinessLabel + '</span>' : '') +
+          '<span class="rec-name" data-entity="' + attr(item.name) + '" onclick="showEntityDetail(this.dataset.entity)">' + esc(item.name) + '</span>' +
+          '<span class="' + badgeClass + '">' + esc(item.type || '') + '</span>' +
+          (hypeLabel ? '<span class="' + hypeClass + '">' + esc(hypeLabel) + '</span>' : '') +
+          (readinessLabel ? '<span class="' + readinessClass + '">' + esc(readinessLabel) + '</span>' : '') +
         '</div>' +
         '<div class="rec-score-bar"><div class="rec-score-fill" style="width:' + scorePercent + '%"></div></div>' +
         (item.description ? '<div class="rec-desc">' + esc(item.description.slice(0, 200)) + '</div>' : '') +
         '<div class="rec-provenance">' +
-          item.mentionCount + ' mentions' +
+          finiteNumber(item.mentionCount, 0) + ' mentions' +
           (item.provenanceReels && item.provenanceReels.length > 0 ?
             ' \u00b7 From: ' + item.provenanceReels.map(function(r) {
-              return '<a href="#" onclick="showReelByShortcode(\'' + esc(r.shortcode).replace(/'/g, "\\'") + '\');return false;"><code>' + esc(r.shortcode) + '</code></a>';
+              return '<a href="#" data-shortcode="' + attr(r.shortcode) + '" onclick="showReelByShortcode(this.dataset.shortcode);return false;"><code>' + esc(r.shortcode) + '</code></a>';
             }).join(', ') : '') +
         '</div>' +
       '</div>';
@@ -1975,7 +1994,7 @@ function renderFeed() {
     var timeStr = evt.time.toLocaleTimeString();
     var data = evt.data || {};
     return '<div class="feed-item">' +
-      '<div class="feed-time">' + timeStr + ' \u00b7 ' + evt.type + '</div>' +
+      '<div class="feed-time">' + esc(timeStr) + ' \u00b7 ' + esc(evt.type) + '</div>' +
       '<div class="feed-content">' + esc(data.summary || data.message || JSON.stringify(data).slice(0, 120)) + '</div>' +
     '</div>';
   }).join('');
@@ -1999,8 +2018,8 @@ async function showEntityDetail(name) {
     if (!e) { setModalContent('<div class="empty-state"><div class="empty-state-text">Entity not found</div></div>'); return; }
 
     var html = '<div class="detail-row"><div class="detail-label">Name</div><div class="detail-value" style="font-weight:600">' + esc(e.display_name) + '</div></div>' +
-      '<div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge badge-' + e.type + '">' + e.type + '</span></div></div>' +
-      '<div class="detail-row"><div class="detail-label">Mentions</div><div class="detail-value">' + e.mention_count + '</div></div>' +
+      '<div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge badge-' + cssToken(e.type) + '">' + esc(e.type) + '</span></div></div>' +
+      '<div class="detail-row"><div class="detail-label">Mentions</div><div class="detail-value">' + finiteNumber(e.mention_count, 0) + '</div></div>' +
       '<div class="detail-row"><div class="detail-label">First Seen</div><div class="detail-value">' + esc(e.first_seen) + '</div></div>';
 
     if (e.description) {
@@ -2017,8 +2036,8 @@ async function showEntityDetail(name) {
         html += '<div class="rel-row">' +
           '<span class="rel-arrow">' + direction + '</span>' +
           '<span class="rel-type">' + esc(rel.type) + '</span>' +
-          '<span class="rel-target" onclick="showEntityDetail(\'' + esc(otherName).replace(/'/g, "\\'") + '\')">' + esc(otherName) + '</span>' +
-          '<span class="rel-evidence">' + rel.evidence_count + 'x</span>' +
+          '<span class="rel-target" data-entity="' + attr(otherName) + '" onclick="showEntityDetail(this.dataset.entity)">' + esc(otherName) + '</span>' +
+          '<span class="rel-evidence">' + finiteNumber(rel.evidence_count, 0) + 'x</span>' +
         '</div>';
       }
       html += '</div>';
@@ -2028,7 +2047,7 @@ async function showEntityDetail(name) {
       html += '<div class="detail-section"><div class="detail-section-title">Source Reels (' + data.sourceReels.length + ')</div>';
       for (var si = 0; si < data.sourceReels.length; si++) {
         var r = data.sourceReels[si];
-        html += '<div class="source-reel" onclick="showReelDetail(\'' + esc(r.id).replace(/'/g, "\\'") + '\')">' +
+        html += '<div class="source-reel" data-reel="' + attr(r.id) + '" onclick="showReelDetail(this.dataset.reel)">' +
           '<div class="source-reel-code">' + esc(r.shortcode) + ' <span class="badge badge-default" style="font-size:10px">' + esc(r.content_type) + '</span></div>' +
           '<div class="source-reel-summary">' + esc((r.summary || '').slice(0, 120)) + '</div>' +
         '</div>';
@@ -2058,14 +2077,14 @@ async function showReelDetail(id) {
       '<div class="detail-row"><div class="detail-label">Sentiment</div><div class="detail-value">' + esc(r.sentiment) + '</div></div>';
 
     if (r.hype_level) {
-      html += '<div class="detail-row"><div class="detail-label">Hype Level</div><div class="detail-value"><span class="badge badge-hype-' + r.hype_level + '">' + esc(r.hype_level) + '</span></div></div>';
+      html += '<div class="detail-row"><div class="detail-label">Hype Level</div><div class="detail-value"><span class="badge badge-hype-' + cssToken(r.hype_level) + '">' + esc(r.hype_level) + '</span></div></div>';
     }
 
     if (r.implementation_readiness) {
-      html += '<div class="detail-row"><div class="detail-label">Readiness</div><div class="detail-value"><span class="badge badge-readiness-' + r.implementation_readiness + '">' + esc(r.implementation_readiness) + '</span></div></div>';
+      html += '<div class="detail-row"><div class="detail-label">Readiness</div><div class="detail-value"><span class="badge badge-readiness-' + cssToken(r.implementation_readiness) + '">' + esc(r.implementation_readiness) + '</span></div></div>';
     }
 
-    html += '<div class="detail-row"><div class="detail-label">Views</div><div class="detail-value">' + (r.view_count ? r.view_count.toLocaleString() : '0') + '</div></div>' +
+    html += '<div class="detail-row"><div class="detail-label">Views</div><div class="detail-value">' + finiteNumber(r.view_count, 0).toLocaleString() + '</div></div>' +
       '<div class="detail-row"><div class="detail-label">Created</div><div class="detail-value">' + esc(r.created_at) + '</div></div>';
 
     if (r.summary) {
@@ -2076,7 +2095,7 @@ async function showReelDetail(id) {
       html += '<div class="detail-section"><div class="detail-section-title">Entities (' + data.entities.length + ')</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
       for (var ei = 0; ei < data.entities.length; ei++) {
         var ent = data.entities[ei];
-        html += '<span class="badge badge-' + (ent.type || 'default') + '" style="cursor:pointer" onclick="showEntityDetail(\'' + esc(ent.canonical_name).replace(/'/g, "\\'") + '\')">' + esc(ent.display_name) + '</span>';
+        html += '<span class="badge badge-' + cssToken(ent.type || 'default') + '" style="cursor:pointer" data-entity="' + attr(ent.canonical_name) + '" onclick="showEntityDetail(this.dataset.entity)">' + esc(ent.display_name) + '</span>';
       }
       html += '</div></div>';
     }
@@ -2085,7 +2104,7 @@ async function showReelDetail(id) {
       html += '<div class="detail-section"><div class="detail-section-title">Facts (' + data.facts.length + ')</div>';
       for (var fi = 0; fi < data.facts.length; fi++) {
         var f = data.facts[fi];
-        var conf = Math.round(f.confidence * 100);
+        var conf = Math.round(finiteNumber(f.confidence, 0) * 100);
         html += '<div style="padding:6px 0;border-bottom:1px solid var(--stone-200);font-size:14px;display:flex;justify-content:space-between;align-items:start;gap:12px">' +
           '<span style="color:var(--stone-600);line-height:1.6">' + esc(f.claim) + '</span>' +
           '<span style="color:var(--stone-400);font-size:12px;white-space:nowrap;font-weight:500">' + conf + '%</span>' +
